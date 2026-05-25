@@ -102,6 +102,32 @@ def apply_collapse(categorized: dict[str, list[str]], rules: list[dict]) -> dict
 
 # ---------- layout ----------
 
+def predict_wrap_lines(label: str, box_width: int, font_size: int = 20) -> int:
+    """Approximate how many lines a label will wrap to inside an Excalidraw labeled
+    box. Conservative — overestimates rather than underestimates to avoid overflow.
+
+    At fontSize 20, average char width is ~12px including ligature padding. The
+    container reserves ~20px for left/right padding. So:
+      chars_per_line = floor((box_width - 20) / 12)
+      lines          = ceil(len(label) / chars_per_line)
+    """
+    chars_per_line = max(1, (box_width - 20) // 12)
+    return max(1, -(-len(label) // chars_per_line))  # ceil division
+
+
+def predicted_box_height(label: str, box_width: int, font_size: int = 20,
+                         default: int = 60) -> int:
+    """Box height needed to contain a label that may wrap to multiple lines.
+    Each text line at fontSize 20 is ~25px (lineHeight 1.25). Add 10px vertical
+    padding around the text. Single- and two-line labels share the same
+    default (60); 3+ lines scale up.
+    """
+    lines = predict_wrap_lines(label, box_width, font_size)
+    if lines <= 2:
+        return default
+    return lines * 25 + 10
+
+
 def build_elements(name: str, version: str, categorized: dict, buckets: list[dict], lay: dict) -> list[dict]:
     populated = [b for b in buckets if categorized.get(b["id"])]
     elements = []
@@ -134,9 +160,45 @@ def build_elements(name: str, version: str, categorized: dict, buckets: list[dic
         base = n // cols
         rem = n % cols
         col_counts = [base + (1 if i < rem else 0) for i in range(cols)]
-        max_col = max(col_counts) if col_counts else 1
+        n_rows = max(col_counts) if col_counts else 1
 
-        zone_h = lay["header_height"] + max_col * lay["pitch"] + lay["bottom_padding"]
+        # Compute col x positions FIRST so we can predict per-label box heights
+        usable = canvas_w - 2 * lay["zone_padding"]
+        col_w = (usable - lay["internal_gutter"] * (cols - 1)) // cols
+        col_xs = [zone_x + lay["zone_padding"] + i * (col_w + lay["internal_gutter"]) for i in range(cols)]
+
+        # Predict each box's height (defensive sizing handles 3+ line wraps)
+        # Layout is column-major: column `ci` holds deps at indices
+        # [sum(col_counts[:ci]) .. sum(col_counts[:ci+1])]
+        box_heights = {}  # (col, row) -> height
+        for ci, cn in enumerate(col_counts):
+            for ri in range(cn):
+                idx = sum(col_counts[:ci]) + ri
+                if idx >= n:
+                    continue
+                box_heights[(ci, ri)] = predicted_box_height(
+                    deps[idx], col_w, default=lay["box_height_default"]
+                )
+
+        # For each row, the row-height = max of all box heights in that row
+        # (row-aligned grid look; uniform horizontal baselines)
+        row_heights = []
+        for ri in range(n_rows):
+            heights_this_row = [box_heights[(ci, ri)] for ci in range(cols)
+                                if (ci, ri) in box_heights]
+            row_heights.append(max(heights_this_row) if heights_this_row else lay["box_height_default"])
+
+        # Cumulative y offset per row, relative to first row's top
+        intra_row_gap = max(10, lay["pitch"] - lay["box_height_default"])  # 10px default
+        row_y_offsets = [0]
+        for ri in range(1, n_rows):
+            row_y_offsets.append(row_y_offsets[-1] + row_heights[ri - 1] + intra_row_gap)
+
+        # Zone height = header + sum(row heights) + (n_rows-1)*gap + safety pad
+        zone_h = (lay["header_height"]
+                  + sum(row_heights)
+                  + (n_rows - 1) * intra_row_gap
+                  + lay["bottom_padding"])
 
         # Zone background
         elements.append({
@@ -156,11 +218,8 @@ def build_elements(name: str, version: str, categorized: dict, buckets: list[dic
             "text": b["title"], "fontSize": 18,
             "strokeColor": b["color_header"],
         })
-        # Compute col x positions
-        usable = canvas_w - 2 * lay["zone_padding"]
-        col_w = (usable - lay["internal_gutter"] * (cols - 1)) // cols
-        col_xs = [zone_x + lay["zone_padding"] + i * (col_w + lay["internal_gutter"]) for i in range(cols)]
-        # Place deps
+        # Place deps (column-major fill) using dynamic per-row heights
+        first_box_y = cur_y + 45  # y of the first row's top
         idx = 0
         for ci, cn in enumerate(col_counts):
             for ri in range(cn):
@@ -172,9 +231,9 @@ def build_elements(name: str, version: str, categorized: dict, buckets: list[dic
                     "type": "rectangle",
                     "id": f"d_{bid}_{idx}_{slug}",
                     "x": col_xs[ci],
-                    "y": cur_y + 45 + ri * lay["pitch"],
+                    "y": first_box_y + row_y_offsets[ri],
                     "width": col_w,
-                    "height": lay["box_height_default"],
+                    "height": row_heights[ri],
                     "backgroundColor": b["color_box_bg"],
                     "fillStyle": "solid",
                     "strokeColor": b["color_box_stroke"],

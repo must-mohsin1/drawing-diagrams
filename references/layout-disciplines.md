@@ -11,13 +11,26 @@ Hard-won rules from drawing 4 real codebases in the original dep-diagram skill's
 
 ## 2. Defensive sizing (the wrap-overflow trap)
 
-Excalidraw silently doubles a labeled box's height when its label text wraps to 2 lines. This breaks naive zone-height math.
+Excalidraw silently expands a labeled box's height when its label text wraps. A label that wraps to 2 lines makes the box ~60px tall; a 3-line wrap makes it ~85px; a 4-line wrap makes it ~110px. This breaks naive zone-height math AND any layout that assumes uniform row pitch.
 
 **Rules:**
-- A label fits on one line if `len(text) * 12 ≤ box_width - 20` at fontSize 20.
-- For any box whose label won't fit, set `height: 60` (2-line capacity).
-- **Safer alternative:** use `height: 60` uniformly for every box in a zone where any label is long. Wastes ~30% vertical space but eliminates the bug class.
+- A label fits on one line if `len(text) * 12 ≤ box_width - 20` at fontSize 20. Predict line count with `ceil(len(text) / floor((box_width - 20) / 12))`.
+- **Per-label height formula** (use this exactly):
+  ```
+  lines = predict_wrap_lines(label, box_width)
+  box_height = 60 if lines ≤ 2 else lines * 25 + 10
+  ```
+  (Each text line ≈ 25px at fontSize 20 with lineHeight 1.25, plus 10px padding.)
+- **Row-aligned grid layout** — when boxes sit in a multi-column grid, every box in row R should use the SAME height: `row_height = max(box_height(label) for label in row R)`. Mixed-height columns produce broken visual grids.
+- **Dynamic per-row y offsets** — DON'T use uniform pitch. Compute each row's y based on the cumulative height of previous rows:
+  ```
+  row_y[0] = first_box_y
+  row_y[i] = row_y[i-1] + row_height[i-1] + intra_row_gap   # 10px gap between rows
+  ```
+- **Zone height** = `header_h (25) + sum(row_heights) + (n_rows - 1) * 10 + bottom_pad (30)`.
 - **Always verify** containment after POST. Catch wraps you didn't predict.
+
+This is what `scripts/gen_deps_diagram.py` does — see `predict_wrap_lines()` and `predicted_box_height()` for reference implementations.
 
 ## 3. Zone height formula
 
