@@ -8,7 +8,11 @@ Say *"draw the architecture of this repo"* or *"make a deps diagram for my packa
 
 ## What it looks like
 
-A real `package.json` rendered as a hand-drawn dependency map (deterministic path, ~1 second):
+Watch it build a dep map progressively (deterministic path, ~3 seconds end-to-end):
+
+![Demo: dep map being drawn](screenshots/demo.gif)
+
+The completed dep map (docusaurus website, 13 deps across 2 zones):
 
 ![Dependency map example](screenshots/01-dependency-map.png)
 
