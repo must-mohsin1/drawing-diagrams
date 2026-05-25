@@ -9,7 +9,7 @@ Say *"draw the architecture of this repo"* or *"make a deps diagram for my packa
 ## Install
 
 ```bash
-git clone https://github.com/<your-fork>/drawing-diagrams ~/.claude/skills/drawing-diagrams
+git clone https://github.com/must-mohsin1/drawing-diagrams.git ~/.claude/skills/drawing-diagrams
 ```
 
 That's the skill installed. Now you need the canvas server (a one-time, separate install):
