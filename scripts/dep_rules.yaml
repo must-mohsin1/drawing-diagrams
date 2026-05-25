@@ -1,0 +1,162 @@
+# Categorization rules for dep-map generator.
+# Buckets in declaration order define top-to-bottom render order.
+# Match strategy: first matching pattern wins. Unmatched runtime deps go to "Utils".
+# Unmatched devDependencies always go to "Dev / Build".
+
+buckets:
+  - id: webui
+    title: Web UI / Frontend
+    color_zone_bg: "#dbe4ff"
+    color_zone_stroke: "#4a9eed"
+    color_header: "#2563eb"
+    color_box_bg: "#a5d8ff"
+    color_box_stroke: "#4a9eed"
+    patterns:
+      - "^react$"
+      - "^react-dom$"
+      - "^react-router"
+      - "^@docusaurus/"
+      - "^@easyops-cn/docusaurus"
+      - "^@mdx-js/"
+      - "^@nous-research/ui"
+      - "^@tailwindcss/"
+      - "^tailwind"
+      - "^tailwind-merge$"
+      - "^class-variance-authority$"
+      - "^clsx$"
+      - "^lucide-react$"
+      - "^flag-icons$"
+      - "^prism-react-renderer$"
+      - "^mermaid$"
+      - "^ink$"
+      - "^ink-"
+      - "^@hermes/ink$"
+      - "^@xterm/"
+
+  - id: mcp
+    title: MCP / Protocol
+    color_zone_bg: "#e5dbff"
+    color_zone_stroke: "#8b5cf6"
+    color_header: "#6d28d9"
+    color_box_bg: "#d0bfff"
+    color_box_stroke: "#8b5cf6"
+    patterns:
+      - "^@modelcontextprotocol/"
+      - "^zod$"
+      - "^zod-to-json-schema$"
+
+  - id: http
+    title: HTTP / Server
+    color_zone_bg: "#ffd8a8"
+    color_zone_stroke: "#f59e0b"
+    color_header: "#b45309"
+    color_box_bg: "#ffe1b3"
+    color_box_stroke: "#f59e0b"
+    patterns:
+      - "^express$"
+      - "^fastify$"
+      - "^koa$"
+      - "^cors$"
+      - "^ws$"
+      - "^node-fetch$"
+      - "^axios$"
+
+  - id: graphics
+    title: Graphics / Animation
+    color_zone_bg: "#eebefa"
+    color_zone_stroke: "#a21caf"
+    color_header: "#86198f"
+    color_box_bg: "#f5b7fa"
+    color_box_stroke: "#a21caf"
+    patterns:
+      - "^@react-three/"
+      - "^three$"
+      - "^gsap$"
+      - "^leva$"
+      - "^motion$"
+      - "^framer-motion$"
+      - "^@observablehq/"
+      - "^unicode-animations$"
+
+  - id: state
+    title: State / Stores
+    color_zone_bg: "#c3fae8"
+    color_zone_stroke: "#06b6d4"
+    color_header: "#0e7490"
+    color_box_bg: "#9ee7d8"
+    color_box_stroke: "#06b6d4"
+    patterns:
+      - "^@nanostores/"
+      - "^nanostores$"
+      - "^zustand$"
+      - "^redux"
+      - "^@reduxjs/"
+      - "^jotai$"
+      - "^recoil$"
+
+  - id: testing
+    title: Testing
+    color_zone_bg: "#eebefa"
+    color_zone_stroke: "#be185d"
+    color_header: "#be185d"
+    color_box_bg: "#f5b7fa"
+    color_box_stroke: "#be185d"
+    patterns:
+      - "^vitest$"
+      - "^jest$"
+      - "^mocha$"
+      - "^playwright$"
+      - "^@playwright/"
+      - "^@testing-library/"
+
+  - id: utils
+    title: Utils
+    color_zone_bg: "#fff3bf"
+    color_zone_stroke: "#ca8a04"
+    color_header: "#a16207"
+    color_box_bg: "#fff3bf"
+    color_box_stroke: "#ca8a04"
+    patterns:
+      - "^dotenv$"
+      - "^winston$"
+      - "^pino$"
+      - "^lodash"
+      - "^dayjs$"
+      - "^date-fns$"
+
+  - id: dev
+    title: Dev / Build (devDependencies)
+    color_zone_bg: "#d3f9d8"
+    color_zone_stroke: "#22c55e"
+    color_header: "#15803d"
+    color_box_bg: "#b2f2bb"
+    color_box_stroke: "#22c55e"
+    # Catch-all for devDependencies — no patterns, takes everything dev that hasn't been matched
+
+# Family collapse rules: pkgs matching `pattern` get collapsed into a single entry.
+# This prevents @xterm/* (5 pkgs) or @types/* (many) from cluttering the diagram.
+collapse_families:
+  - pattern: "^@types/"
+    label_template: "@types/* ({members})"
+  - pattern: "^@xterm/"
+    label_template: "@xterm/* ({n} addons)"
+  - pattern: "^@babel/"
+    label_template: "@babel/* ({n} pkgs)"
+    min_members: 3  # only collapse if 3+ present
+  - pattern: "^eslint-plugin-"
+    label_template: "eslint-plugin-* ({n} plugins)"
+    min_members: 4
+
+# Layout knobs
+layout:
+  canvas_width: 720
+  zone_x: 40
+  title_y: 20
+  row_gap: 20
+  zone_padding: 20
+  internal_gutter: 20
+  cols_per_zone: 3        # for zones with many deps
+  box_height_default: 60  # uniform per defensive sizing
+  pitch: 70
+  header_height: 25
+  bottom_padding: 30
