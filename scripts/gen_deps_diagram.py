@@ -60,6 +60,13 @@ def match_bucket(pkg: str, buckets: list[dict]) -> str | None:
 
 
 def categorize(deps: dict, dev_deps: dict, buckets: list[dict]) -> dict[str, list[str]]:
+    """
+    Runtime deps (package.json#dependencies) are matched against bucket patterns;
+    unmatched fall through to "utils".
+    devDependencies ALWAYS go to "dev" regardless of pattern — they're declared
+    as dev by the author, and respecting that declaration beats semantic guessing.
+    (e.g. @docusaurus/types matches ^@docusaurus/ but is declared devDep → "dev")
+    """
     out: dict[str, list[str]] = {b["id"]: [] for b in buckets}
     for pkg in sorted(deps.keys()):
         bid = match_bucket(pkg, buckets)
@@ -67,10 +74,7 @@ def categorize(deps: dict, dev_deps: dict, buckets: list[dict]) -> dict[str, lis
             bid = "utils"  # unmatched runtime → utils
         out[bid].append(pkg)
     for pkg in sorted(dev_deps.keys()):
-        bid = match_bucket(pkg, buckets)
-        if bid is None:
-            bid = "dev"  # unmatched dev → dev
-        out[bid].append(pkg)
+        out["dev"].append(pkg)  # respect package.json declaration
     return out
 
 
@@ -114,7 +118,7 @@ def build_elements(name: str, version: str, categorized: dict, buckets: list[dic
         "text": title, "fontSize": 24, "strokeColor": "#1e1e1e",
     })
 
-    cur_y = 70
+    cur_y = lay["title_y"] + 50   # leave room below the title
     for b in populated:
         deps = categorized[b["id"]]
         bid = b["id"]

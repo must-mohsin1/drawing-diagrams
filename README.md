@@ -6,6 +6,24 @@ Say *"draw the architecture of this repo"* or *"make a deps diagram for my packa
 
 ---
 
+## What it looks like
+
+A real `package.json` rendered as a hand-drawn dependency map (deterministic path, ~1 second):
+
+![Dependency map example](screenshots/01-dependency-map.png)
+
+The skill's own architecture, drawn by the skill (LLM-driven composition path):
+
+![Architecture diagram example](screenshots/02-architecture.png)
+
+The skill's execution flow as a flowchart (showcasing decision diamonds and convergence):
+
+![Flowchart example](screenshots/03-flowchart.png)
+
+For the full architecture writeup, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+---
+
 ## Install
 
 ```bash
@@ -66,6 +84,9 @@ All of this is encoded in `references/canvas-api.md` and `references/layout-disc
 ```
 drawing-diagrams/
 ├── SKILL.md                              ← The skill itself — Claude reads this first
+├── README.md                             ← This file
+├── ARCHITECTURE.md                       ← Technical deep-dive — how it all works
+├── LICENSE                               ← MIT
 ├── references/
 │   ├── canvas-api.md                     ← REST endpoints, schemas, color palette, race-fix
 │   └── layout-disciplines.md             ← Pitch, defensive sizing, cascade rule, checklist
@@ -76,8 +97,10 @@ drawing-diagrams/
 │   ├── .github/workflows/
 │   │   └── diagram-refresh.yml           ← Drop into target repo for auto-PR on dep changes
 │   └── simulate_ci.sh                    ← Local dry-run of the CI flow
-├── LICENSE                               ← MIT
-└── README.md                             ← This file
+└── screenshots/                          ← Example renderings (see top of README)
+    ├── 01-dependency-map.png
+    ├── 02-architecture.png
+    └── 03-flowchart.png
 ```
 
 ---

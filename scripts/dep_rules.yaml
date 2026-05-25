@@ -151,7 +151,7 @@ collapse_families:
 layout:
   canvas_width: 720
   zone_x: 40
-  title_y: 20
+  title_y: 100        # below the canvas toolbar (which sits ~y=70-115 in screen coords)
   row_gap: 20
   zone_padding: 20
   internal_gutter: 20
