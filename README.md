@@ -1,8 +1,8 @@
 # drawing-diagrams — a Claude Code skill
 
-> Render any diagram — architecture, dependency map, sequence, state machine, flowchart, data flow, ER — onto a live Excalidraw canvas, then export a canonicalized JSON snapshot. Two paths: **deterministic generators** for fact-based diagrams (dependency maps from `package.json`) and **LLM-driven composition** for synthesis diagrams.
+> Render any diagram — architecture, dependency map (Node + Python), file tree, sequence, state machine, flowchart, data flow, ER — onto a live Excalidraw canvas, then export a canonicalized JSON snapshot. Two paths: **deterministic generators** for fact-based diagrams (deps from `package.json` / `pyproject.toml` / `requirements.txt`; directory structure from a folder) and **LLM-driven composition** for synthesis diagrams.
 
-Say *"draw the architecture of this repo"* or *"make a deps diagram for my package.json"* and Claude figures out the rest.
+Say *"draw the architecture of this repo"*, *"make a deps diagram for my pyproject.toml"*, or *"show me the file tree"* and Claude figures out the rest.
 
 ---
 
@@ -15,6 +15,10 @@ Watch it build a dep map progressively (deterministic path, ~3 seconds end-to-en
 The completed dep map (docusaurus website, 13 deps across 2 zones):
 
 ![Dependency map example](screenshots/01-dependency-map.png)
+
+A directory tree (the skill's own repo, depth ≤ 4) — color-coded by file extension:
+
+![File tree example](screenshots/04-file-tree.png)
 
 The skill's own architecture, drawn by the skill (LLM-driven composition path):
 
@@ -57,7 +61,8 @@ Open a new Claude Code session and just ask for a diagram. The skill triggers on
 
 | You say | Skill does |
 |---|---|
-| *"Draw a deps diagram for `~/my-app`"* | Categorizes `package.json` into 8 colored zones, draws on canvas, saves canonical JSON |
+| *"Draw a deps diagram for `~/my-app`"* | Auto-detects `package.json` / `pyproject.toml` / `requirements.txt`. Categorizes deps into colored zones, draws on canvas, saves canonical JSON |
+| *"Show me the file tree of `~/projects/foo`"* | Walks the directory (max-depth 4), draws an indented tree color-coded by file extension |
 | *"Visualize the architecture of `~/projects/foo`"* | Reads source, picks modules, places them in a layered diagram |
 | *"Sequence diagram for OAuth: browser → app → IdP → callback"* | Lifelines + numbered messages |
 | *"Flowchart for our onboarding"* | Rectangles + diamonds for decisions |
@@ -95,8 +100,10 @@ drawing-diagrams/
 │   ├── canvas-api.md                     ← REST endpoints, schemas, color palette, race-fix
 │   └── layout-disciplines.md             ← Pitch, defensive sizing, cascade rule, checklist
 ├── scripts/
-│   ├── gen_deps_diagram.py               ← Deterministic dep-map generator
-│   └── dep_rules.yaml                    ← Categorization rules (regex-based, editable)
+│   ├── gen_deps_diagram.py               ← Deterministic dep-map generator (Node + Python)
+│   ├── dep_rules.yaml                    ← Node/npm categorization rules
+│   ├── python_dep_rules.yaml             ← Python/PyPI categorization rules
+│   └── gen_file_tree_diagram.py          ← Deterministic file-tree generator
 ├── ci/
 │   ├── .github/workflows/
 │   │   └── diagram-refresh.yml           ← Drop into target repo for auto-PR on dep changes

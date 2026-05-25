@@ -30,9 +30,126 @@ from urllib.request import Request, urlopen
 
 # ---------- I/O ----------
 
+def _strip_version_specifier(spec: str) -> str:
+    """Strip PEP 508-style version specifiers from a Python requirement string.
+    'fastapi>=0.115.0' -> 'fastapi'
+    'uvicorn[standard]>=0.34.0' -> 'uvicorn'  (extras stripped too)
+    '# comment' -> ''  (empty signals "skip me")
+    """
+    s = spec.strip()
+    if not s or s.startswith("#"):
+        return ""
+    # Strip inline comment
+    s = s.split("#", 1)[0].strip()
+    # Drop everything after the first version/extras/marker delimiter
+    for delim in ["[", "<", ">", "=", "~", "!", ";", " "]:
+        i = s.find(delim)
+        if i != -1:
+            s = s[:i]
+    return s.strip()
+
+
 def load_package_json(path: Path) -> tuple[str, str, dict, dict]:
     p = json.loads(path.read_text())
-    return p.get("name", "?"), p.get("version", "?"), p.get("dependencies", {}), p.get("devDependencies", {})
+    return (p.get("name", "?"), p.get("version", "?"),
+            p.get("dependencies", {}), p.get("devDependencies", {}))
+
+
+def load_pyproject_toml(path: Path) -> tuple[str, str, dict, dict]:
+    """Load Python project metadata + deps from pyproject.toml.
+
+    Handles PEP 621 ([project]), PEP 735 ([dependency-groups]),
+    Poetry ([tool.poetry]), and PDM ([tool.pdm]) conventions.
+    """
+    try:
+        import tomllib  # Python 3.11+
+    except ImportError:
+        try:
+            import tomli as tomllib  # type: ignore
+        except ImportError:
+            sys.stderr.write("ERROR: need 'tomllib' (Python 3.11+) or 'tomli' (pip install tomli)\n")
+            sys.exit(3)
+    raw = tomllib.loads(path.read_text())
+
+    # Detect convention
+    if "project" in raw:
+        # PEP 621
+        proj = raw["project"]
+        name = proj.get("name", "?")
+        version = proj.get("version", "?")
+        deps_raw = proj.get("dependencies", []) or []
+        deps = {_strip_version_specifier(d): "" for d in deps_raw if _strip_version_specifier(d)}
+        # Dev deps live in multiple places depending on tool — merge them all
+        dev = {}
+        # PEP 735 dependency-groups (uv, hatch)
+        for group_name, group_deps in (raw.get("dependency-groups", {}) or {}).items():
+            for d in group_deps or []:
+                name_only = _strip_version_specifier(str(d))
+                if name_only:
+                    dev[name_only] = ""
+        # PEP 621 optional-dependencies (the 'dev' / 'test' / 'lint' extras)
+        for extra_name, extra_deps in (proj.get("optional-dependencies", {}) or {}).items():
+            if extra_name.lower() in ("dev", "test", "lint", "tests", "linting", "dev-dependencies"):
+                for d in extra_deps or []:
+                    name_only = _strip_version_specifier(d)
+                    if name_only:
+                        dev[name_only] = ""
+        return name, version, deps, dev
+    elif "tool" in raw and "poetry" in raw["tool"]:
+        po = raw["tool"]["poetry"]
+        name = po.get("name", "?")
+        version = po.get("version", "?")
+        deps_raw = po.get("dependencies", {}) or {}
+        # Poetry deps are dict: {name: version_or_spec}
+        deps = {k: "" for k in deps_raw.keys() if k.lower() != "python"}
+        dev = {}
+        # Old-style: tool.poetry.dev-dependencies
+        for k in (po.get("dev-dependencies", {}) or {}).keys():
+            dev[k] = ""
+        # New-style: tool.poetry.group.dev.dependencies
+        for group_name, group in (po.get("group", {}) or {}).items():
+            for k in (group.get("dependencies", {}) or {}).keys():
+                if k.lower() != "python":
+                    dev[k] = ""
+        return name, version, deps, dev
+    else:
+        sys.stderr.write("ERROR: pyproject.toml has no [project] or [tool.poetry] table\n")
+        sys.exit(3)
+
+
+def load_requirements_txt(path: Path) -> tuple[str, str, dict, dict]:
+    """Load Python deps from requirements.txt. No name/version/dev-split available;
+    use the parent dir name as the project name and treat everything as runtime."""
+    lines = path.read_text().splitlines()
+    deps: dict = {}
+    for line in lines:
+        # Skip -r / --requirement / -e references
+        stripped = line.strip()
+        if stripped.startswith(("-r", "--", "-e ", "-c")):
+            continue
+        name = _strip_version_specifier(stripped)
+        if name:
+            deps[name] = ""
+    # Best-effort project name from the parent directory
+    name = path.parent.name or "?"
+    return name, "?", deps, {}
+
+
+def autoload_packages(path: Path) -> tuple[str, str, dict, dict, str]:
+    """Auto-detect ecosystem from the package file's name; return (name, ver, deps, dev, ecosystem)."""
+    fname = path.name.lower()
+    if fname == "package.json":
+        n, v, d, dv = load_package_json(path)
+        return n, v, d, dv, "npm"
+    if fname == "pyproject.toml":
+        n, v, d, dv = load_pyproject_toml(path)
+        return n, v, d, dv, "python"
+    if fname == "requirements.txt" or fname.startswith("requirements"):
+        n, v, d, dv = load_requirements_txt(path)
+        return n, v, d, dv, "python"
+    sys.stderr.write(f"ERROR: unsupported package file '{fname}'. "
+                     f"Supported: package.json, pyproject.toml, requirements.txt\n")
+    sys.exit(3)
 
 
 def load_rules(path: Path) -> dict:
@@ -310,16 +427,37 @@ def verify(canvas: str) -> tuple[bool, list[str]]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--package", required=True, type=Path)
-    ap.add_argument("--rules", required=True, type=Path)
+    ap.add_argument("--package", required=True, type=Path,
+                    help="Path to package.json, pyproject.toml, or requirements.txt")
+    ap.add_argument("--rules", required=False, type=Path,
+                    help="Path to rules YAML. If omitted, auto-picked from the package file's "
+                         "ecosystem (npm → dep_rules.yaml, python → python_dep_rules.yaml).")
     ap.add_argument("--canvas", default="http://127.0.0.1:3030")
     ap.add_argument("--output", type=Path, default=None,
                     help="Path to write canvas snapshot JSON (after POST + verify)")
     ap.add_argument("--clear", action="store_true", default=True)
     args = ap.parse_args()
 
-    name, version, deps, dev_deps = load_package_json(args.package)
-    rules = load_rules(args.rules)
+    # Auto-detect ecosystem from filename, pick the right loader
+    name, version, deps, dev_deps, ecosystem = autoload_packages(args.package)
+
+    # Auto-pick rules file if not specified
+    if args.rules is None:
+        script_dir = Path(__file__).resolve().parent
+        default_rules = {
+            "npm":    script_dir / "dep_rules.yaml",
+            "python": script_dir / "python_dep_rules.yaml",
+        }
+        rules_path = default_rules.get(ecosystem)
+        if rules_path is None or not rules_path.exists():
+            sys.stderr.write(f"ERROR: no default rules for ecosystem '{ecosystem}'. "
+                             f"Pass --rules explicitly.\n")
+            sys.exit(3)
+    else:
+        rules_path = args.rules
+
+    print(f"[gen] ecosystem={ecosystem}  rules={rules_path.name}")
+    rules = load_rules(rules_path)
     cat = categorize(deps, dev_deps, rules["buckets"])
     cat = apply_collapse(cat, rules.get("collapse_families", []))
     elements = build_elements(name, version, cat, rules["buckets"], rules["layout"])

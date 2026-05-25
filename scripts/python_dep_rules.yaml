@@ -1,0 +1,241 @@
+# Python (PyPI) dep-map categorization rules.
+# Buckets matched in declaration order. Unmatched runtime deps fall through to
+# "utils". devDependencies (PEP 735 [dependency-groups] / Poetry dev / etc.)
+# ALWAYS go to "dev" regardless of pattern — author's declaration beats regex.
+
+buckets:
+  - id: webapi
+    title: Web / API
+    color_zone_bg: "#dbe4ff"
+    color_zone_stroke: "#4a9eed"
+    color_header: "#2563eb"
+    color_box_bg: "#a5d8ff"
+    color_box_stroke: "#4a9eed"
+    patterns:
+      - "^fastapi$"
+      - "^starlette$"
+      - "^flask"
+      - "^django"
+      - "^sanic$"
+      - "^aiohttp$"
+      - "^uvicorn"
+      - "^gunicorn$"
+      - "^hypercorn$"
+      - "^sse-starlette$"
+      - "^python-multipart$"
+      - "^litestar$"
+      - "^bottle$"
+
+  - id: ai
+    title: AI / LLM / Agents
+    color_zone_bg: "#e5dbff"
+    color_zone_stroke: "#8b5cf6"
+    color_header: "#6d28d9"
+    color_box_bg: "#d0bfff"
+    color_box_stroke: "#8b5cf6"
+    patterns:
+      - "^openai$"
+      - "^anthropic$"
+      - "^mistralai$"
+      - "^cohere$"
+      - "^langchain"
+      - "^langgraph"
+      - "^langfuse$"
+      - "^llama-index"
+      - "^llama_index"
+      - "^firecrawl"
+      - "^exa-py$"
+      - "^fal-client$"
+      - "^edge-tts$"
+      - "^parallel-web$"
+      - "^litellm$"
+      - "^instructor$"
+      - "^haystack"
+      - "^semantic-kernel$"
+
+  - id: data
+    title: Data / Numerics / ML
+    color_zone_bg: "#c3fae8"
+    color_zone_stroke: "#06b6d4"
+    color_header: "#0e7490"
+    color_box_bg: "#9ee7d8"
+    color_box_stroke: "#06b6d4"
+    patterns:
+      - "^numpy$"
+      - "^pandas$"
+      - "^polars$"
+      - "^scipy$"
+      - "^statsmodels$"
+      - "^scikit-learn$"
+      - "^matplotlib$"
+      - "^seaborn$"
+      - "^plotly$"
+      - "^pyarrow$"
+      - "^duckdb$"
+      - "^torch$"
+      - "^tensorflow$"
+      - "^jax$"
+      - "^transformers$"
+      - "^accelerate$"
+      - "^bitsandbytes$"
+      - "^datasets$"
+      - "^huggingface"
+
+  - id: validation
+    title: Validation / Schema
+    color_zone_bg: "#fff3bf"
+    color_zone_stroke: "#ca8a04"
+    color_header: "#a16207"
+    color_box_bg: "#ffec99"
+    color_box_stroke: "#ca8a04"
+    patterns:
+      - "^pydantic"
+      - "^marshmallow$"
+      - "^attrs$"
+      - "^dataclasses-json$"
+      - "^cattrs$"
+      - "^msgspec$"
+      - "^jsonschema$"
+
+  - id: db
+    title: DB / Storage
+    color_zone_bg: "#d3f9d8"
+    color_zone_stroke: "#22c55e"
+    color_header: "#15803d"
+    color_box_bg: "#b2f2bb"
+    color_box_stroke: "#22c55e"
+    patterns:
+      - "^sqlalchemy$"
+      - "^alembic$"
+      - "^psycopg"
+      - "^asyncpg$"
+      - "^pymongo$"
+      - "^motor$"
+      - "^redis$"
+      - "^aioredis$"
+      - "^pymysql$"
+      - "^mysqlclient$"
+      - "^sqlmodel$"
+      - "^tortoise-orm$"
+      - "^peewee$"
+      - "^duckdb$"
+
+  - id: http
+    title: HTTP / Networking
+    color_zone_bg: "#ffd8a8"
+    color_zone_stroke: "#f59e0b"
+    color_header: "#b45309"
+    color_box_bg: "#ffe1b3"
+    color_box_stroke: "#f59e0b"
+    patterns:
+      - "^httpx"
+      - "^requests$"
+      - "^aiohttp$"
+      - "^websockets$"
+      - "^urllib3$"
+      - "^grpcio"
+      - "^paho-mqtt$"
+
+  - id: cli
+    title: CLI / UI
+    color_zone_bg: "#eebefa"
+    color_zone_stroke: "#a21caf"
+    color_header: "#86198f"
+    color_box_bg: "#f5b7fa"
+    color_box_stroke: "#a21caf"
+    patterns:
+      - "^rich$"
+      - "^click$"
+      - "^typer$"
+      - "^prompt_toolkit$"
+      - "^prompt-toolkit$"
+      - "^textual$"
+      - "^fire$"
+      - "^argparse"
+      - "^tqdm$"
+
+  - id: testing
+    title: Testing
+    color_zone_bg: "#fce7f3"
+    color_zone_stroke: "#be185d"
+    color_header: "#9d174d"
+    color_box_bg: "#fbcfe8"
+    color_box_stroke: "#be185d"
+    patterns:
+      - "^pytest"
+      - "^hypothesis$"
+      - "^tox$"
+      - "^coverage$"
+      - "^mock$"
+      - "^responses$"
+      - "^vcrpy$"
+
+  - id: utils
+    title: Utils / Infra
+    color_zone_bg: "#fef3c7"
+    color_zone_stroke: "#d97706"
+    color_header: "#92400e"
+    color_box_bg: "#fde68a"
+    color_box_stroke: "#d97706"
+    patterns:
+      - "^python-dotenv$"
+      - "^dotenv$"
+      - "^pyyaml$"
+      - "^ruamel.yaml$"
+      - "^jinja2$"
+      - "^tenacity$"
+      - "^loguru$"
+      - "^structlog$"
+      - "^orjson$"
+      - "^ujson$"
+      - "^msgpack$"
+      - "^toml$"
+      - "^tomli$"
+      - "^cryptography$"
+      - "^bcrypt$"
+      - "^passlib$"
+      - "^python-jose$"
+      - "^pyjwt$"
+      - "^certifi$"
+      - "^markdown"
+      - "^beautifulsoup4$"
+      - "^lxml$"
+
+  - id: dev
+    title: Dev / Build / Lint (devDependencies)
+    color_zone_bg: "#e0e7ff"
+    color_zone_stroke: "#4f46e5"
+    color_header: "#3730a3"
+    color_box_bg: "#c7d2fe"
+    color_box_stroke: "#4f46e5"
+    # devDependencies catch-all — no patterns; everything declared as dev lands here
+
+# Family collapse rules — same idea as @types/* in npm.
+# Useful for langchain (which ships dozens of related sub-packages).
+collapse_families:
+  - pattern: "^langchain-"
+    label_template: "langchain-* ({n} integrations)"
+    min_members: 3
+  - pattern: "^@types/"
+    label_template: "@types/* ({members})"
+  - pattern: "^pytest-"
+    label_template: "pytest-* ({n} plugins)"
+    min_members: 3
+  - pattern: "^ruamel\\."
+    label_template: "ruamel.* ({n} pkgs)"
+    min_members: 2
+
+# Same layout knobs as the npm rules; the gen script's predict_wrap_lines
+# handles per-row dynamic heights automatically.
+layout:
+  canvas_width: 720
+  zone_x: 40
+  title_y: 100
+  row_gap: 20
+  zone_padding: 20
+  internal_gutter: 20
+  cols_per_zone: 3
+  box_height_default: 60
+  pitch: 70
+  header_height: 25
+  bottom_padding: 30
